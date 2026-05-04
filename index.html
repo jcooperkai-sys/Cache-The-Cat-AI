@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      width: 240px;
+      height: 420px;
+      user-select: none;
+      font-family: 'Pixelify Sans', 'Courier New', monospace;
+    }
+
+    #chatbox {
+      position: absolute;
+      bottom: 134px;
+      left: 8px;
+      right: 8px;
+      z-index: 5;
+      background: #fff;
+      border: 3px solid #111;
+      border-radius: 22px;
+      box-shadow: 4px 4px 0 #111;
+      padding: 10px 14px 8px;
+      font-family: 'Pixelify Sans', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #111;
+      word-wrap: break-word;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: none;
+    }
+
+    #chatbox.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    #chatbox::after {
+      content: '';
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 12px solid #111;
+    }
+
+    #chatbox::before {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 9px solid #fff;
+      z-index: 1;
+    }
+
+    #messages {
+      max-height: 110px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      margin-bottom: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: #ccc transparent;
+    }
+
+    #messages::-webkit-scrollbar { width: 3px; }
+    #messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+    .msg {
+      font-size: 11px;
+      line-height: 1.45;
+      margin-bottom: 4px;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .msg-user { color: #888; }
+    .msg-user::before { content: 'you > '; font-weight: bold; color: #aaa; }
+    .msg-cat  { color: #111; }
+    .msg-cat::before  { content: 'cache > '; font-weight: bold; }
+    .msg-art { display: block; font-size: 10px; opacity: 0.7; margin-top: 1px; padding-left: 46px; }
+    .msg-system { color: #999; font-size: 10px; font-style: italic; border-left: 2px solid #ddd; padding-left: 4px; white-space: pre-wrap; }
+    .msg-system::before { content: '! '; }
+
+    #chat-sep {
+      border: none;
+      border-top: 2px solid #111;
+      margin: 4px 0 5px;
+    }
+
+    #input-area {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 18px;
+    }
+
+    #input-prefix {
+      color: #888;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    #input-display {
+      flex: 1;
+      font-size: 12px;
+      min-height: 16px;
+      word-break: break-all;
+    }
+
+    #input-cursor {
+      font-size: 11px;
+      font-weight: bold;
+      animation: blink 0.8s step-end infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes charPop {
+      0% { opacity: 0; transform: scale(0.3) translateY(3px); }
+      65% { transform: scale(1.2) translateY(-1px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .char-pop {
+      display: inline-block;
+      animation: charPop 0.1s ease-out forwards;
+    }
+
+    #hidden-input {
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+
+    #pet {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 120px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      cursor: grab;
+      display: block;
+      z-index: 2;
+    }
+
+    #pet.dragging { cursor: grabbing; }
+
+    #mood-indicator {
+      position: absolute;
+      right: 56px;
+      bottom: 106px;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #111;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 2px 2px 0 #111;
+      font-size: 11px;
+      line-height: 14px;
+      text-align: center;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    #settings-panel {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 6px;
+      bottom: 0;
+      background: #fff;
+      border: 3px solid #111;
+      box-shadow: 4px 4px 0 #111;
+      border-radius: 8px;
+      padding: 10px;
+      color: #111;
+      font-size: 11px;
+      line-height: 1.35;
+      z-index: 30;
+      pointer-events: auto;
+      overflow-y: auto;
+    }
+
+    #onboarding-panel {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 8px;
+      background: #fff;
+      border: 3px solid #111;
+      box-shadow: 4px 4px 0 #111;
+      border-radius: 8px;
+      padding: 10px;
+      color: #111;
+      font-size: 11px;
+      line-height: 1.35;
+      z-index: 12;
+      pointer-events: auto;
+    }
+
+    .sp-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    #sp-close {
+      cursor: pointer;
+      border: 2px solid #111;
+      min-width: 18px;
+      height: 18px;
+      text-align: center;
+      line-height: 13px;
+      box-shadow: 1px 1px 0 #111;
+    }
+
+    .sp-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 5px 0;
+    }
+
+    .sp-info {
+      display: block;
+      color: #555;
+      border-top: 1px solid #ddd;
+      padding-top: 5px;
+      margin-top: 7px;
+    }
+
+    .sp-text,
+    .sp-num {
+      width: 88px;
+      min-width: 0;
+      border: 2px solid #111;
+      padding: 2px 3px;
+      font: inherit;
+      font-size: 10px;
+      background: #fff;
+    }
+
+    .sp-num { width: 52px; }
+
+    .sp-btn {
+      width: 100%;
+      margin-top: 6px;
+      padding: 5px 6px;
+      background: #fff;
+      border: 2px solid #111;
+      box-shadow: 2px 2px 0 #111;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .action-approval {
+      border-left-color: #111;
+      color: #111;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+      margin-top: 5px;
+    }
+
+    .action-buttons button {
+      flex: 1;
+      padding: 3px 4px;
+      background: #fff;
+      border: 2px solid #111;
+      box-shadow: 1px 1px 0 #111;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .action-approval.approved { color: #164f25; }
+    .action-approval.denied { color: #7a1f1f; }
+
+    .agent-stop button {
+      margin-top: 5px;
+      padding: 3px 5px;
+      width: 100%;
+      background: #fff;
+      border: 2px solid #111;
+      box-shadow: 1px 1px 0 #111;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .image-preview img {
+      width: 96px;
+      height: 96px;
+      display: block;
+      margin: 4px auto;
+      border: 2px solid #111;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background:
+        linear-gradient(45deg, #ddd 25%, transparent 25%),
+        linear-gradient(-45deg, #ddd 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ddd 75%),
+        linear-gradient(-45deg, transparent 75%, #ddd 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="chatbox">
+    <div id="messages"></div>
+    <hr id="chat-sep">
+    <div id="input-area">
+      <span id="input-prefix">&gt;</span>
+      <div id="input-display"></div>
+      <span id="input-cursor">#</span>
+    </div>
+    <input id="hidden-input" type="text" autocomplete="off" spellcheck="false" autocorrect="off">
+  </div>
+
+  <canvas id="pet" width="120" height="120"></canvas>
+  <div id="mood-indicator">:|</div>
+  <script src="renderer.js"></script>
+</body>
+</html>

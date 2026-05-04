@@ -1,0 +1,48 @@
+{
+  "name": "desktop-pet",
+  "version": "1.0.1",
+  "productName": "DesktopPet",
+  "description": "Cache AI desktop companion for Windows",
+  "author": "Cache AI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check renderer.js",
+    "test": "npm run check && npm audit --audit-level=low",
+    "smoke": "node scripts/smoke-launch.js",
+    "verify:release": "node scripts/verify-release.js",
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^41.5.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.electronindustries.desktoppet",
+    "productName": "DesktopPet",
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!dist/**",
+      "!scripts/**",
+      "!.github/**",
+      "!CACHE_KNOWLEDGE_PROMPT.md",
+      "!*.md"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "C:\\Users\\jcoop\\Downloads\\49f74c10-8996-42cb-b5f9-65ed0633616c.png",
+      "forceCodeSigning": false
+    },
+    "portable": {
+      "artifactName": "DesktopPet.exe"
+    }
+  }
+}

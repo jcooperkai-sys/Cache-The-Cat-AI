@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# build output
+dist/
+out/
+release/
+*.blockmap
+
+# local app/user data
+cache_memory.json
+cache_settings.json
+cache.log
+cache_audit.log
+*.tmp
+*.log
+
+# local env/secrets
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+*.crt
+
+# editor/os noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# generated pixel art / local screenshots
+cache_pixel_art_*.png
+cache_ocr_*.png
+screenshots/
