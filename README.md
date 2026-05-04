@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="assets/branding/cache-kitty-logo.png" alt="Cache AI kitty logo" width="260">
+</p>
+
+<p align="center">
+  <img src="assets/branding/cache-ai-line.png" alt="Cache AI" width="520">
+</p>
+
 # Cache AI - Kitty Companion
 
 Cache AI - Kitty Companion is a tiny Windows desktop assistant built as an Electron app. It lives on your desktop as a small pixel-art white kitty, wanders around the screen, opens a compact chat bubble when you interact with it, and answers through local AI models running on your own computer.
