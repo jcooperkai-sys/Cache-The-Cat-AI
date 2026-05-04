@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   ollamaChat: (body) => ipcRenderer.invoke('ollama-chat', body),
   ollamaStatus: () => ipcRenderer.invoke('ollama-status'),
+  ollamaBootstrap: (models) => ipcRenderer.invoke('ollama-bootstrap', models),
+  onOllamaBootstrapProgress: (cb) => ipcRenderer.on('ollama-bootstrap-progress', (_, msg) => cb(msg)),
 
   onOllamaToken: (cb) => {
     _tokenCb = (_, t) => cb(t);

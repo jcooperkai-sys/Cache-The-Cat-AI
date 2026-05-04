@@ -17,7 +17,7 @@ npm run build
 npm run verify:release
 ```
 
-The production artifact is `dist/DesktopPet.exe`.
+The production artifacts are `dist/DesktopPet.exe` and `dist/CacheAI-Setup-<version>.exe`.
 
 ## Runtime Requirements
 
@@ -26,7 +26,7 @@ The production artifact is `dist/DesktopPet.exe`.
 - Text model: `llama3.2:3b` by default
 - Vision model: `moondream` by default
 
-The model names can be changed in Cache settings.
+The installer does not require users to install Ollama manually. On first launch, Cache downloads Ollama from `https://ollama.com/download/OllamaSetup.exe`, starts it, and pulls the configured text and vision models. The model names can be changed in Cache settings.
 
 ## Security Model
 

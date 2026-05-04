@@ -5,7 +5,7 @@ const https = require('https');
 const fs   = require('fs');
 const os   = require('os');
 const crypto = require('crypto');
-const { exec, execFile } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 
 let win;
 let hidden = false;
@@ -14,6 +14,8 @@ const W = 240;
 const H = 420;
 const LOG_FILE = () => path.join(app.getPath('userData'), 'cache.log');
 const AUDIT_FILE = () => path.join(app.getPath('userData'), 'cache_audit.log');
+const OLLAMA_DOWNLOAD_URL = 'https://ollama.com/download/OllamaSetup.exe';
+const REQUIRED_OLLAMA_MODELS = ['llama3.2:3b', 'moondream'];
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
@@ -480,27 +482,201 @@ ipcMain.handle('web-search', async (_, query) => {
 });
 
 // ── Ollama (Node http) ────────────────────────────────────────────────────────
-ipcMain.handle('ollama-status', async () => new Promise(resolve => {
-  const req = http.request(
-    { hostname: '127.0.0.1', port: 11434, path: '/api/tags', method: 'GET', timeout: 3000 },
-    res => {
-      let body = '';
-      res.on('data', chunk => { body += chunk.toString(); });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(body || '{}');
-          const models = Array.isArray(parsed.models) ? parsed.models.map(m => m.name) : [];
-          resolve({ ok: true, models });
-        } catch (e) {
-          resolve({ ok: false, error: e.message, models: [] });
-        }
+function getOllamaStatus(timeout = 3000) {
+  return new Promise(resolve => {
+    const req = http.request(
+      { hostname: '127.0.0.1', port: 11434, path: '/api/tags', method: 'GET', timeout },
+      res => {
+        let body = '';
+        res.on('data', chunk => { body += chunk.toString(); });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body || '{}');
+            const models = Array.isArray(parsed.models) ? parsed.models.map(m => m.name) : [];
+            resolve({ ok: true, models });
+          } catch (e) {
+            resolve({ ok: false, error: e.message, models: [] });
+          }
+        });
+      }
+    );
+    req.on('timeout', () => req.destroy(new Error('ollama timeout')));
+    req.on('error', e => resolve({ ok: false, error: e.message, models: [] }));
+    req.end();
+  });
+}
+
+function normalizeModelName(name) {
+  return String(name || '').trim().toLowerCase().replace(/:latest$/, '');
+}
+
+function hasModel(models, model) {
+  const wanted = normalizeModelName(model);
+  return Array.isArray(models) && models.some(name => normalizeModelName(name) === wanted);
+}
+
+function findOllamaExe() {
+  const candidates = [
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama', 'ollama.exe'),
+    path.join(process.env.PROGRAMFILES || '', 'Ollama', 'ollama.exe'),
+    path.join(process.env['PROGRAMFILES(X86)'] || '', 'Ollama', 'ollama.exe'),
+  ].filter(Boolean);
+  return candidates.find(file => {
+    try { return fs.existsSync(file); } catch { return false; }
+  }) || 'ollama';
+}
+
+function downloadFile(url, destination, onProgress) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destination);
+    const request = https.get(url, { headers: { 'User-Agent': 'CacheAI/1.0' } }, response => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        file.close();
+        try { fs.unlinkSync(destination); } catch {}
+        downloadFile(response.headers.location, destination, onProgress).then(resolve, reject);
+        return;
+      }
+      if (response.statusCode !== 200) {
+        file.close();
+        try { fs.unlinkSync(destination); } catch {}
+        reject(new Error(`download failed: HTTP ${response.statusCode}`));
+        return;
+      }
+      const total = Number(response.headers['content-length'] || 0);
+      let received = 0;
+      response.on('data', chunk => {
+        received += chunk.length;
+        if (total && onProgress) onProgress(Math.round((received / total) * 100));
       });
+      response.pipe(file);
+      file.on('finish', () => file.close(resolve));
+    });
+    request.on('error', error => {
+      file.close();
+      try { fs.unlinkSync(destination); } catch {}
+      reject(error);
+    });
+  });
+}
+
+function runProcess(command, args, options = {}, onLine) {
+  return new Promise((resolve, reject) => {
+    const { timeout, ...spawnOptions } = options;
+    const child = spawn(command, args, { windowsHide: true, ...spawnOptions });
+    let output = '';
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      fn(value);
+    };
+    const timer = timeout ? setTimeout(() => {
+      try { child.kill(); } catch {}
+      finish(reject, new Error(`${command} timed out`));
+    }, timeout) : null;
+    const collect = data => {
+      const text = data.toString();
+      output += text;
+      if (onLine) text.split(/\r?\n/).filter(Boolean).forEach(onLine);
+    };
+    if (child.stdout) child.stdout.on('data', collect);
+    if (child.stderr) child.stderr.on('data', collect);
+    child.on('error', error => finish(reject, error));
+    child.on('close', code => code === 0 ? finish(resolve, output) : finish(reject, new Error(output.trim() || `${command} exited ${code}`)));
+  });
+}
+
+async function waitForOllama(ms = 45000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    const status = await getOllamaStatus(2500);
+    if (status.ok) return status;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+  return getOllamaStatus(2500);
+}
+
+function startOllamaServer(ollamaExe) {
+  try {
+    const child = spawn(ollamaExe, ['serve'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+  } catch (e) {
+    log('warn', 'ollama serve start failed', { error: e.message });
+  }
+}
+
+async function installOllamaIfNeeded(sendProgress) {
+  let status = await getOllamaStatus();
+  if (status.ok) return findOllamaExe();
+
+  let ollamaExe = findOllamaExe();
+  if (ollamaExe !== 'ollama') {
+    sendProgress('starting Ollama');
+    startOllamaServer(ollamaExe);
+    status = await waitForOllama();
+    if (status.ok) return ollamaExe;
+  }
+
+  sendProgress('downloading Ollama');
+  const installer = path.join(app.getPath('userData'), 'OllamaSetup.exe');
+  await downloadFile(OLLAMA_DOWNLOAD_URL, installer, percent => sendProgress(`downloading Ollama ${percent}%`));
+
+  sendProgress('installing Ollama');
+  try {
+    await runProcess(installer, ['/S'], { timeout: 10 * 60 * 1000 });
+  } catch (e) {
+    sendProgress('opening Ollama installer');
+    await shell.openPath(installer);
+    throw new Error('Ollama installer opened. Finish the installer, then restart Cache.');
+  }
+
+  ollamaExe = findOllamaExe();
+  sendProgress('starting Ollama');
+  startOllamaServer(ollamaExe);
+  status = await waitForOllama();
+  if (!status.ok) throw new Error(status.error || 'Ollama did not start');
+  return ollamaExe;
+}
+
+ipcMain.handle('ollama-bootstrap', async (event, requestedModels) => {
+  const models = (Array.isArray(requestedModels) && requestedModels.length ? requestedModels : REQUIRED_OLLAMA_MODELS)
+    .map(model => String(model || '').trim())
+    .filter(model => /^[a-zA-Z0-9._:-]{1,80}$/.test(model));
+  const sendProgress = message => {
+    try { event.sender.send('ollama-bootstrap-progress', String(message || 'working')); } catch {}
+  };
+
+  try {
+    sendProgress('checking Ollama');
+    const ollamaExe = await installOllamaIfNeeded(sendProgress);
+    let status = await waitForOllama();
+    if (!status.ok) throw new Error(status.error || 'Ollama is offline');
+
+    for (const model of models) {
+      if (hasModel(status.models, model)) continue;
+      sendProgress(`pulling ${model}`);
+      await runProcess(ollamaExe, ['pull', model], { timeout: 60 * 60 * 1000 }, line => {
+        if (/pulling|downloading|verifying|writing|success/i.test(line)) sendProgress(`${model}: ${line.slice(0, 120)}`);
+      });
+      status = await getOllamaStatus(5000);
     }
-  );
-  req.on('timeout', () => req.destroy(new Error('ollama timeout')));
-  req.on('error', e => resolve({ ok: false, error: e.message, models: [] }));
-  req.end();
-}));
+
+    status = await getOllamaStatus(5000);
+    sendProgress('models ready');
+    return { ok: true, models: status.models || [] };
+  } catch (e) {
+    log('error', 'ollama bootstrap failed', { error: e.message });
+    sendProgress(`setup failed: ${e.message}`);
+    return { ok: false, error: e.message, models: [] };
+  }
+});
+
+ipcMain.handle('ollama-status', async () => getOllamaStatus());
 
 ipcMain.handle('ollama-chat', async (event, body) => {
   if (!body || typeof body !== 'object') throw new Error('invalid ollama request');

@@ -1,7 +1,7 @@
 {
   "name": "desktop-pet",
   "version": "1.0.1",
-  "productName": "DesktopPet",
+  "productName": "Cache AI",
   "description": "Cache AI desktop companion for Windows",
   "author": "Cache AI",
   "main": "main.js",
@@ -11,7 +11,9 @@
     "test": "npm run check && npm audit --audit-level=low",
     "smoke": "node scripts/smoke-launch.js",
     "verify:release": "node scripts/verify-release.js",
-    "build": "electron-builder --win --x64"
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable --x64",
+    "build:installer": "electron-builder --win nsis --x64"
   },
   "devDependencies": {
     "electron": "^41.5.0",
@@ -19,7 +21,7 @@
   },
   "build": {
     "appId": "com.electronindustries.desktoppet",
-    "productName": "DesktopPet",
+    "productName": "Cache AI",
     "files": [
       "**/*",
       "!node_modules/.cache",
@@ -36,6 +38,12 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "C:\\Users\\jcoop\\Downloads\\49f74c10-8996-42cb-b5f9-65ed0633616c.png",
@@ -43,6 +51,15 @@
     },
     "portable": {
       "artifactName": "DesktopPet.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cache AI",
+      "artifactName": "CacheAI-Setup-${version}.${ext}"
     }
   }
 }

@@ -14,6 +14,7 @@ npm run verify:release
 Confirm:
 
 - `dist/DesktopPet.exe` exists.
+- `dist/CacheAI-Setup-<version>.exe` exists.
 - `dist/win-unpacked/resources/app.asar` contains only app runtime files.
 - `npm audit` reports zero vulnerabilities.
 - First launch shows onboarding.
@@ -24,9 +25,14 @@ Confirm:
 
 ## Artifact
 
-Current release strategy is portable-only: `dist/DesktopPet.exe`.
+Current release strategy ships both a portable exe and an NSIS installer:
 
-An installer and auto-update flow should be added only after a signing certificate and trusted update host exist.
+- `dist/DesktopPet.exe`
+- `dist/CacheAI-Setup-<version>.exe`
+
+The installer installs Cache AI. On first launch, Cache downloads/installs Ollama if needed, starts it, and pulls the default models: `llama3.2:3b` and `moondream`.
+
+An auto-update flow should be added only after a signing certificate and trusted update host exist.
 
 ## Code Signing
 

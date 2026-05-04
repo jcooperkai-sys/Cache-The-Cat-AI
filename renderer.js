@@ -509,6 +509,45 @@ function modelStatusText() {
   return `missing model${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`;
 }
 
+let ollamaBootstrapRunning = false;
+async function ensureOllamaReady(showProgress = false) {
+  if (ollamaBootstrapRunning) return false;
+  await refreshOllamaStatus();
+  const missing = !ollamaStatusInfo.ok || !hasOllamaModel(settings.textModel) || !hasOllamaModel(settings.visionModel);
+  if (!missing) return true;
+  if (!window.electronAPI.ollamaBootstrap) return false;
+
+  ollamaBootstrapRunning = true;
+  let progressEl = null;
+  const showStatus = text => {
+    if (!showProgress && !chatVisible) return;
+    showChatbox();
+    if (!progressEl) progressEl = appendMsg('system', text);
+    else progressEl.textContent = text;
+    scrollBottom();
+  };
+
+  try {
+    if (window.electronAPI.onOllamaBootstrapProgress) {
+      window.electronAPI.onOllamaBootstrapProgress(msg => showStatus(`setup: ${msg}`));
+    }
+    showStatus('setup: checking local AI models');
+    const result = await window.electronAPI.ollamaBootstrap([settings.textModel, settings.visionModel]);
+    if (result && result.ok) {
+      ollamaStatusInfo = { ok: true, models: result.models || [] };
+      showStatus(modelStatusText());
+      return true;
+    }
+    showStatus(`setup failed: ${(result && result.error) || 'unknown error'}`);
+    return false;
+  } catch (e) {
+    showStatus(`setup failed: ${e.message}`);
+    return false;
+  } finally {
+    ollamaBootstrapRunning = false;
+  }
+}
+
 // â”€â”€ Clipboard watcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let clipCooldown = false;
 async function handleClipboard(text) {
@@ -703,6 +742,7 @@ function buildSettingsPanel() {
     <div class="sp-row sp-info">memory facts: ${memory.facts.length} - reminders: ${memory.reminders.length} - tasks: ${memory.tasks.length}</div>
     <div class="sp-row sp-info">data: ${safeDataPath}</div>
     <div class="sp-row sp-info">monitor: ${safeMonitor}</div>
+    <button class="sp-btn" id="sp-setup-models">install / repair local AI</button>
     <button class="sp-btn" id="sp-refresh-models">refresh model status</button>
     <button class="sp-btn" id="sp-clear-mem">clear memory</button>
     <button class="sp-btn" id="sp-reset-all">reset all data</button>
@@ -766,6 +806,10 @@ function buildSettingsPanel() {
   };
   document.getElementById('sp-refresh-models').onclick = async () => {
     await refreshOllamaStatus();
+    buildSettingsPanel();
+  };
+  document.getElementById('sp-setup-models').onclick = async () => {
+    await ensureOllamaReady(true);
     buildSettingsPanel();
   };
   document.getElementById('sp-hide-app').onclick = () => {
@@ -2212,6 +2256,7 @@ async function init() {
   startReminderCheck();
   startTaskCheck();
   setInputEnabled(true);
+  ensureOllamaReady(!settings.onboardingComplete);
   goIdle();
   lastMoveTs = performance.now();
   requestAnimationFrame(loop);
