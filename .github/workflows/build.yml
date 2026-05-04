@@ -24,7 +24,7 @@ jobs:
       - run: npm audit --audit-level=low
       - run: npm run build
       - run: npm run verify:release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Cache-AI-Kitty-Companion-Windows
           path: |
