@@ -1,8 +1,8 @@
 {
   "name": "desktop-pet",
   "version": "1.0.1",
-  "productName": "Cache AI",
-  "description": "Cache AI desktop companion for Windows",
+  "productName": "Cache AI - Kitty Companion",
+  "description": "Cache AI - Kitty Companion desktop assistant for Windows",
   "author": "Cache AI",
   "main": "main.js",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "build": {
     "appId": "com.electronindustries.desktoppet",
-    "productName": "Cache AI",
+    "productName": "Cache AI - Kitty Companion",
     "files": [
       "**/*",
       "!node_modules/.cache",
@@ -58,7 +58,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Cache AI",
+      "shortcutName": "Cache AI - Kitty Companion",
       "artifactName": "CacheAI-Setup-${version}.${ext}"
     }
   }
