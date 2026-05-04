@@ -28,6 +28,22 @@ The Windows installer installs Cache AI. On first launch, Cache checks whether O
 
 First launch requires an internet connection because Ollama and the model files must be downloaded. After setup finishes, normal chat and screen-analysis features run locally.
 
+## Quick Start Tutorial
+
+1. Go to the GitHub Releases page for this project.
+2. Download the latest `CacheAI-Setup-<version>.exe` file.
+3. Run the installer.
+4. If Windows SmartScreen appears, choose `More info`, then `Run anyway`. This can happen for unsigned early builds.
+5. Launch `Cache AI - Kitty Companion` from the Start Menu or desktop shortcut.
+6. Keep the computer connected to the internet during first launch.
+7. Wait while Cache checks for Ollama, installs it if needed, starts it, and downloads the default models.
+8. When setup finishes, hover over the kitty to open the chat bubble.
+9. Type a message and press Enter.
+
+The first setup can take a while because model files are large. If setup fails, open the kitty settings with right-click, then press `install / repair local AI`. Make sure internet is connected and that Windows or antivirus did not block Ollama.
+
+After the first setup, Cache uses the local models already installed on the machine. You can use normal chat features without downloading the models again.
+
 ## Features
 
 - Pixel-art kitty desktop companion for Windows.
