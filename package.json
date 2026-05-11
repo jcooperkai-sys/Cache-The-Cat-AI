@@ -16,7 +16,7 @@
     "build:installer": "electron-builder --win nsis --x64"
   },
   "devDependencies": {
-    "electron": "^41.5.0",
+    "electron": "^42.0.1",
     "electron-builder": "^26.8.1"
   },
   "build": {
