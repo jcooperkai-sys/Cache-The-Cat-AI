@@ -11,9 +11,9 @@
     "test": "npm run check && npm audit --audit-level=low",
     "smoke": "node scripts/smoke-launch.js",
     "verify:release": "node scripts/verify-release.js",
-    "build": "electron-builder --win --x64",
-    "build:portable": "electron-builder --win portable --x64",
-    "build:installer": "electron-builder --win nsis --x64"
+    "build": "electron-builder --win --x64 --publish never",
+    "build:portable": "electron-builder --win portable --x64 --publish never",
+    "build:installer": "electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
     "electron": "^41.5.0",
