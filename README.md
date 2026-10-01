@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="assets/branding/cache-kitty-logo.png" alt="Cache AI kitty logo" width="260">
+</p>
+
+<p align="center">
+  <img src="assets/branding/cache-ai-line.png" alt="Cache AI" width="520">
+</p>
+
 # Cache AI - Kitty Companion
 
 Cache AI - Kitty Companion is a tiny Windows desktop assistant built as an Electron app. It lives on your desktop as a small pixel-art white kitty, wanders around the screen, opens a compact chat bubble when you interact with it, and answers through local AI models running on your own computer.
@@ -19,6 +27,22 @@ Users do not need to install Ollama manually.
 The Windows installer installs Cache AI. On first launch, Cache checks whether Ollama is available. If it is missing, Cache downloads the Ollama installer, installs it, starts the local Ollama service, and pulls the default models.
 
 First launch requires an internet connection because Ollama and the model files must be downloaded. After setup finishes, normal chat and screen-analysis features run locally.
+
+## Quick Start Tutorial
+
+1. Go to the GitHub Releases page for this project.
+2. Download the latest `CacheAI-Setup-<version>.exe` file.
+3. Run the installer.
+4. If Windows SmartScreen appears, choose `More info`, then `Run anyway`. This can happen for unsigned early builds.
+5. Launch `Cache AI - Kitty Companion` from the Start Menu or desktop shortcut.
+6. Keep the computer connected to the internet during first launch.
+7. Wait while Cache checks for Ollama, installs it if needed, starts it, and downloads the default models.
+8. When setup finishes, hover over the kitty to open the chat bubble.
+9. Type a message and press Enter.
+
+The first setup can take a while because model files are large. If setup fails, open the kitty settings with right-click, then press `install / repair local AI`. Make sure internet is connected and that Windows or antivirus did not block Ollama.
+
+After the first setup, Cache uses the local models already installed on the machine. You can use normal chat features without downloading the models again.
 
 ## Features
 
